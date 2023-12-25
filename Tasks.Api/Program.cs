@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Tasks.Api.Middlewares;
 using Tasks.Api.Models;
 using Tasks.Domain.Interfaces;
 using Tasks.Domain.Interfaces.Generics;
@@ -16,7 +17,9 @@ builder.Services.AddControllers();
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options => {
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo {Title = "Rest Task Api", Version = "v1", Description = "Api com CRUD para a entidade Tarefa"});
+});
 
 builder.Services.AddDbContext<ContextBase>(options =>
               options.UseSqlite(
@@ -36,7 +39,14 @@ var config = new AutoMapper.MapperConfiguration(c =>
 IMapper mapper = config.CreateMapper();
 builder.Services.AddSingleton(mapper);
 
+builder.Services.AddHealthChecks();
+
 var app = builder.Build();
+
+app.UseCors(a => a
+    .AllowAnyMethod()
+    .AllowAnyHeader()
+    .SetIsOriginAllowed(origin => true));
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -45,8 +55,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<ExceptionMiddlewares>();
+
 app.UseHttpsRedirection();
 
 app.MapControllers();
+
+app.UseHealthChecks("/healtz");
 
 app.Run();
